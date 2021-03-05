@@ -46,6 +46,56 @@ Attributes in this section
 
 *  key – The same password that you set with the associated WCCP router.
 
+=ron=
+. .授权给Apache软件基金会(ASF)
+或更多的贡献者许可协议。查看通知文件
+与此工作一起发布的附加信息
+关于版权的所有权。ASF对该文件进行license
+在Apache许可下，版本2.0 (the
+“许可”);除非符合要求，否则不能使用该文件
+的许可证。你可以在以下网站获得一份许可证副本
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+除非适用法律要求或书面同意，
+在许可证下发布的软件是通过
+以“现状”为基础，不含任何保证或条件
+善良，不管是明示的还是暗示的。查看许可证
+特定的语言管理权限和限制
+根据许可证。
+
+. .包括 :: ../../../ common.defs
+
+. ._admin-wccp-service-config:
+
+WCCP服务配置
+**************************
+
+服务定义文件用于:program: ' traffic_wccp '和
+直接:计划:“traffic_server”。
+
+安全性定义文件中的元素受到
+' WCCP RFC (8/2012) <http: tools.ietf.org="" html="" draft-mclaggan-wccp-v2rev1-00=""> ' _。</http:>
+还有一个老版本的RFC，经常出现在搜索结果中，
+WCCP (4/2001) < https://tools.ietf.org/id/draft -威尔逊wrec WCCP - v2 - 01. - txt >”_,
+而RFC在WCCP中所使用的原始参考则支持|TS|若干
+年前的事了。
+
+下面的源树中包含一个示例服务组文件
+项目:“traffic_wccp”。
+
+安全部分
+================
+
+在security部分中，您可以定义在WCCP客户机和WCCP路由器之间共享的密码。此密码用于加密WCCP通信。它是可选的，但强烈推荐使用。
+
+本节中的属性
+
+*选项-必须设置为MD5，如果你想加密你的WCCP流量
+
+*密钥-与你设置的WCCP路由器相同的密码。
+=ron=
+
 Services Section
 ================
 
@@ -82,3 +132,40 @@ Service group attributes include
 
 * proc-name – This attribute is only used by traffic_wccp.  It is not used in the traffic_server WCCP support.  This is the path to a process' PID file.  The service group is advertised to the WCCP router if the process identified in the PID file is currently operational.
 
+=ron=
+服务部分
+================
+
+在services部分中，您可以定义一个服务组列表。每个顶级入口都是一个单独的服务组。
+
+服务组属性包括
+
+* name -服务的名称。在WCCP处理的其余部分中不使用。
+
+*描述-对服务的描述。同样，没有在WCCP处理的其余部分中使用。
+
+* id -安全组id。必须与在关联的WCCP路由器上定义的服务组id匹配。从WCCP的角度来看，这是真正的服务组标识符。
+
+*类型-定义服务组的类型为“标准”或“动态”。有一个标准定义的服务组，id为0的HTTP。4/2001 RFC表示id的0-50保留给知名的服务组。但是最近的8/2012 RFC指出0到254是动态服务的有效服务id。为了避免与旧的WCCP路由器的不同，您可能希望避免动态服务ID的0到50。
+
+* priority -取值范围是0到255。数字越大，优先级越高。众所周知的(标准的)服务被设置为240。如果有多个服务组可以匹配同一个报文，则优先级高的服务组应用。RFC例如，对于目的端口为80的报文定义了服务组100，对于源端口为1024的报文定义了服务组101。对于目标端口设置为80、源端口设置为1024的数据包，需要比较服务组的优先级，以确定应用哪个服务组。
+
+* protocol -这是应该匹配的IP协议号。通常设置为6 (TCP)或17 (UDP)。
+
+*分配- WCCP支持多个WCCP客户端支持单个服务组。然而，流量服务器中当前的WCCP客户端实现假定只有一个WCCP客户端，因此创建了将所有流量指向该WCCP客户端的分配表。赋值类型为散列或掩码，如果未设置，则默认为散列。如果流量服务器支持多个缓存，它可能只支持平衡哈希分配。掩码/值分配似乎更适合需要更严格控制流量的情况。
+
+* primary-hash -这是数据包中用来计算主键的元素。取值包括:src_ip、dst_ip、src_port、dst_port。这个条目是一个列表，因此可以指定多个值。在这种情况下，将使用所有指定的包属性来计算散列桶。在当前的实现中，主哈希值并不重要，因为客户端总是生成一个哈希表，将所有匹配的流量指向它。但是，如果曾经支持多个客户机，可以使用本地流量分布的知识来选择一个包属性，以便更好地在WCCP客户机上传播流量。
+* alt-hash -协议支持两级hash。该属性是一个列表，与primary-hash具有相同的值选项。同样，由于当前的流量服务器实现仅为单个客户机创建分配表，因此指定alt-hash值没有任何作用。
+
+*端口-这是一个端口值列表。一个服务组定义中最多可以包含8个端口值。
+
+* port-type—该属性的值可以是src或dst。如果未指定，则默认为夏令时。它指示端口值应该被解释为源端口还是目标端口。
+
+* forward -这是一个列表。取值包括GRE和L2。这将告知客户端希望如何处理WCCP数据包。GRE表示报文将在GRE隧道中发送。这是默认值。L2意味着客户端在同一网络上，可以通过L2路由(MAC地址)从路由器获得传送到它的流量。
+
+* return - WCCP协议允许WCCP客户端拒绝一个数据包并将其返回给路由器。当前的WCCP客户端实现从来不会这样做。值选项与forward属性相同。
+
+*路由器-这是与WCCP客户端通信的路由器地址列表。WCCP协议允许多个WCCP路由器参与到一个服务组中。在流量服务器实现中对多路由器场景进行了简单的测试。
+
+* proc-name -该属性仅被traffic_wccp使用。在traffic_server WCCP支持中不使用。这是一个进程PID文件的路径。如果PID文件中标识的进程当前是可操作的，那么服务组就会发布到WCCP路由器。
+=ron=
